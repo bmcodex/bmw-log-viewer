@@ -43,10 +43,46 @@ def display_table(file_path):
     # Wyświetlenie tabeli
     console.print(table)
 
-# Funkcja do generowania wykresu ASCII (do zaimplementowania)
-def plot_data(file_path):
-    console.print(f"[bold yellow]Generowanie wykresu ASCII dla pliku:[/bold yellow] {file_path} (Funkcjonalność w trakcie implementacji...)")
-    # Tutaj będzie implementacja wykresu ASCII
+# Funkcja do generowania wykresu ASCII
+def plot_data(file_path, column='Boost', max_width=50):
+    try:
+        df = pd.read_csv(file_path)
+    except FileNotFoundError:
+        console.print(f"[bold red]Błąd:[/bold red] Plik '{file_path}' nie został znaleziony.", file=sys.stderr)
+        sys.exit(1)
+    except pd.errors.EmptyDataError:
+        console.print(f"[bold red]Błąd:[/bold red] Plik '{file_path}' jest pusty.", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[bold red]Wystąpił błąd podczas wczytywania pliku:[/bold red] {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if column not in df.columns:
+        console.print(f"[bold red]Błąd:[/bold red] Kolumna '{column}' nie została znaleziona w pliku logów.", file=sys.stderr)
+        sys.exit(1)
+
+    data = df[column].astype(float)
+    min_val = data.min()
+    max_val = data.max()
+    range_val = max_val - min_val
+
+    console.print(f"[bold yellow]Wykres ASCII dla kolumny '{column}'[/bold yellow] (Min: {min_val:.2f}, Max: {max_val:.2f})")
+    console.print("-" * (max_width + 10))
+
+    # Ograniczenie do pierwszych 50 wierszy dla czytelności wykresu
+    for i, val in enumerate(data.head(50)):
+        # Normalizacja wartości do szerokości terminala
+        if range_val == 0:
+            bar_length = 0
+        else:
+            bar_length = int(((val - min_val) / range_val) * max_width)
+
+        bar = "█" * bar_length
+        # Kolorowanie paska na podstawie wartości (np. czerwony dla wysokiego boostu)
+        color = "red" if val > (min_val + range_val * 0.75) else "green"
+        
+        # Wyświetlenie indeksu, wartości i paska
+        console.print(f"[dim]{i:02d}[/dim] | [{color}]{bar}[/{color}] {val:.2f}")
 
 def main():
     parser = argparse.ArgumentParser(description="BMW Log Viewer - Narzędzie CLI do przeglądania logów CSV.")
@@ -59,7 +95,7 @@ def main():
     parser.add_argument(
         '--plot',
         action='store_true',
-        help='Wyświetla prosty wykres ASCII zamiast tabeli.'
+        help='Wyświetla prosty wykres ASCII zamiast tabeli. Domyślnie rysuje kolumnę "Boost".'
     )
 
     args = parser.parse_args()
